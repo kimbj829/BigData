@@ -1,0 +1,44 @@
+sms_dtm_freq_train <- sms_dtm_train[ , sms_freq_words]		#전 수업에서 먼가 저장된 데이터를 들고옴
+sms_dtm_freq_test <- sms_dtm_test[ ,sms_freq_words]
+sms_dtm_freq_train						#실행해보는거
+sms_dtm_freq_test
+
+convert_counts <- function(x) {x <- ifelse(x>0, 'yes', 'no')}		#임의로 함수를 하나 만듬
+
+sms_train <- apply(sms_dtm_freq_train, MARGIN = 2, convert_counts)	#앞에있는 함수와 뒤에있는 변수를 저장
+sms_test <-apply(sms_dtm_freq_test, MARGIN = 2, convert_counts)
+
+install.packages('e1071')		#svm 구현체로 잘 알려진 libsvm을 R에서 쓸 수 있게 한 패키지
+library(e1071)
+
+sms_classifier <- naiveBayes(sms_train, sms_train_labels)		#모델 생성(들어오는 값을 스팸인지 분류하기 위한거)
+sms_test_pred <- predict(sms_classifier, sms_test)		#predict함수 분류기 생성	test로 스팸처리 예측
+#위에서 데이터를 7:3으로 나눠놨는데 이때 3을 예측기로 문제가 있는지 확을을 위해 분류해둔걸 predict함수를 사용에 사용
+sms_test_pred
+
+install.packages('gmodels') #교차표 생성 패키지
+library(gmodels)
+
+CrossTable(sms_test_pred, sms_test_labels,
+	  prop.chisq = FALSE, prop.t = FALSE,
+	  dmm = c('predict', 'actual'))			#sms_test_pred, sms_test_labels 2개를 교차확인
+
+'''
+prop.chisq : 카이제곱 기여도포함 여부
+prop.t : TRUE 테이블의 비율 포함 여부
+dmm : 결과의 차원에 부여할 이름
+'''
+
+sms_classifier2 <- naiveBayes(sms_train, sms_train_labels, laplace =1)		#모델 생성(들어오는 값을 스팸인지 분류하기 위한거)
+sms_test_pred2 <- predict(sms_classifier2, sms_test)		
+
+CrossTable(sms_test_pred2, sms_test_labels,
+	  prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE,
+	  dmm = c('predicted', 'actual'))			#sms_test_pred, sms_test_labels 2개를 교차확인
+
+'''
+교차표 해석
+-> 나이브 베이즈 분류 결과, 스팸 메일을 스팸 메일이라 분류하는 확률은
+91%이고, 스팸 처리가 안된 메일을 스팸 처리가 안된 메일이라 분류하는 확률은 98%이다.  <-이건 R실행시 표기 나온게 있음
+전체적으로 1346:34의 비율이 되므로 괜찮은 분류 결과를 내는 모델이라 할 수 있다.
+'''
